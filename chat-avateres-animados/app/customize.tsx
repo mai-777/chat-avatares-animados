@@ -1,34 +1,61 @@
 // chat-avateres-animados/app/customize.tsx
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity } from 'react-native';
-import Avatar from '../components/Avatar'; // Ajusta la ruta si es necesario
-import { useRouter } from 'expo-router'; // Para la navegación
+import React, { useState, useEffect } from 'react'; // <--- Añade useEffect aquí
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, Alert } from 'react-native'; // <--- Añade Alert para mejores mensajes
+import Avatar from '../components/Avatar';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // <--- Importa AsyncStorage
 
-const colors = ['#aaffaa', '#ffaaaa', '#aaddff', '#ffffaa', '#eeccff']; // Paleta de colores de ejemplo
+const colors = ['#aaffaa', '#ffaaaa', '#aaddff', '#ffffaa', '#eeccff', '#cccccc', '#99bbff', '#ffcc99', '#dddddd']; // Paleta de colores más amplia para probar
 
 export default function CustomizeAvatarScreen() {
-  const router = useRouter(); // Inicializa el hook de router
+  const router = useRouter();
 
-  // Estado para los colores del avatar
   const [currentBodyColor, setCurrentBodyColor] = useState(colors[0]);
-  const [currentBorderColor, setCurrentBorderColor] = useState('#666666'); // Color de borde inicial
+  const [currentBorderColor, setCurrentBorderColor] = useState('#666666');
 
-  const handleSave = () => {
-    // En un futuro, aquí guardarías estos colores en almacenamiento local
-    // o los enviarías a un servidor. Por ahora, solo navegaremos de vuelta.
-    alert(`Avatar guardado con Cuerpo: ${currentBodyColor} y Borde: ${currentBorderColor}`);
-    // Aquí podrías pasar los colores como parámetros al Home Screen si quieres
-    router.push('/'); // Navega de vuelta a la pantalla principal
+  // --- NUEVO CÓDIGO: useEffect para cargar colores al iniciar la pantalla ---
+  useEffect(() => {
+    const loadAvatarColors = async () => {
+      try {
+        const storedBodyColor = await AsyncStorage.getItem('avatarBodyColor');
+        const storedBorderColor = await AsyncStorage.getItem('avatarBorderColor');
+        if (storedBodyColor) {
+          setCurrentBodyColor(storedBodyColor);
+        }
+        if (storedBorderColor) {
+          setCurrentBorderColor(storedBorderColor);
+        }
+      } catch (e) {
+        console.error("Error al cargar los colores del avatar en CustomizeScreen:", e);
+        // Opcional: Mostrar un mensaje al usuario si la carga falla
+        Alert.alert("Error", "No se pudieron cargar los colores guardados.");
+      }
+    };
+    loadAvatarColors();
+  }, []); // El array vacío [] asegura que esto se ejecute solo una vez al montar el componente
+
+  // --- MODIFICACIÓN DE handleSave para guardar en AsyncStorage ---
+  const handleSave = async () => {
+    try {
+      // Guardar los colores actuales en AsyncStorage
+      await AsyncStorage.setItem('avatarBodyColor', currentBodyColor);
+      await AsyncStorage.setItem('avatarBorderColor', currentBorderColor);
+      
+      Alert.alert('¡Éxito!', 'Avatar guardado con éxito!'); // <--- Usamos Alert en lugar de alert
+      router.push('/'); // Navega de vuelta a la pantalla principal
+    } catch (e) {
+      console.error("Error al guardar los colores del avatar:", e);
+      Alert.alert("Error", "Hubo un error al guardar el avatar. Inténtalo de nuevo."); // <--- Usamos Alert
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Personalizar Avatar</Text>
 
-      {/* Muestra el avatar con los colores seleccionados */}
       <Avatar
         size={150}
-        backgroundColor="#f0f0f0" // Fondo del contenedor del avatar
+        backgroundColor="#f0f0f0"
         borderColor={currentBorderColor}
         bodyColor={currentBodyColor}
       />
@@ -53,9 +80,9 @@ export default function CustomizeAvatarScreen() {
       <View style={styles.section}>
         <Text style={styles.subtitle}>Color del Borde:</Text>
         <View style={styles.colorPickerContainer}>
-          {colors.map((color) => ( // Usamos la misma paleta para el borde
+          {colors.map((color) => (
             <TouchableOpacity
-              key={color + '-border'} // Clave única
+              key={color + '-border'} // Clave única para el mapeo
               style={[
                 styles.colorOption,
                 { backgroundColor: color },
@@ -109,10 +136,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     margin: 10,
     borderWidth: 2,
-    borderColor: 'transparent', // Por defecto transparente
+    borderColor: 'transparent',
   },
   selectedColor: {
-    borderColor: '#007bff', // Borde azul para el color seleccionado
+    borderColor: '#007bff',
     borderWidth: 3,
   },
   saveButton: {

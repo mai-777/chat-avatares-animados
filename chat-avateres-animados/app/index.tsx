@@ -1,30 +1,62 @@
 // chat-avateres-animados/app/index.tsx
-import React from 'react';
+import React, { useState, useCallback } from 'react'; // <--- Quita 'useEffect' si lo tenías, y añade 'useCallback'
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity } from 'react-native';
 import Avatar from '../components/Avatar';
-import { useRouter } from 'expo-router'; // Importa useRouter para navegar
+import { useRouter, useFocusEffect } from 'expo-router'; // <--- Añade useFocusEffect
+import AsyncStorage from '@react-native-async-storage/async-storage'; // <--- Importa AsyncStorage
 
 export default function AppRoot() {
-  const router = useRouter(); // Inicializa el hook de router
+  const router = useRouter();
+  // --- NUEVO CÓDIGO: Estados para los colores del avatar con valores por defecto ---
+  const [avatarBodyColor, setAvatarBodyColor] = useState('#aaffaa');
+  const [avatarBorderColor, setAvatarBorderColor] = useState('#008800');
+
+  // --- NUEVO CÓDIGO: Función para cargar los colores del avatar desde AsyncStorage ---
+  const loadAvatarColors = useCallback(async () => {
+    try {
+      const storedBodyColor = await AsyncStorage.getItem('avatarBodyColor');
+      const storedBorderColor = await AsyncStorage.getItem('avatarBorderColor');
+      if (storedBodyColor) {
+        setAvatarBodyColor(storedBodyColor);
+      }
+      if (storedBorderColor) {
+        setAvatarBorderColor(storedBorderColor);
+      }
+    } catch (e) {
+      console.error("Error al cargar los colores del avatar en Home:", e);
+    }
+  }, []); // Las dependencias están vacías ya que solo usamos las funciones set, que son estables
+
+  // --- NUEVO CÓDIGO: useFocusEffect para cargar los colores cada vez que la pantalla está en foco ---
+  useFocusEffect(
+    useCallback(() => {
+      loadAvatarColors();
+      // Opcional: puedes retornar una función de limpieza si la necesitas
+      // return () => { /* cualquier limpieza */ };
+    }, [loadAvatarColors]) // Se ejecuta cuando loadAvatarColors cambia (aunque useCallback lo mantiene estable)
+  );
 
   const handleCustomizePress = () => {
-    router.push('/customize'); // Navega a la ruta /customize
+    router.push('/customize');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Salón de Chat Animado</Text>
 
-      {/* Aquí agregamos una instancia de tu Avatar */}
-      <Avatar size={120} backgroundColor="#f0f0f0" borderColor="#008800" bodyColor="#aaffaa" />
+      {/* --- MODIFICACIÓN: Pasamos los colores del estado al componente Avatar --- */}
+      <Avatar
+        size={120}
+        backgroundColor="#f0f0f0" // El fondo del contenedor del avatar lo dejamos fijo
+        borderColor={avatarBorderColor} // Color del borde desde el estado
+        bodyColor={avatarBodyColor} // Color del cuerpo desde el estado
+      />
       <Text style={{ marginTop: 20, color: '#555' }}>¡Este es tu avatar!</Text>
 
-      {/* Botón para ir a la pantalla de personalización */}
       <TouchableOpacity style={styles.customizeButton} onPress={handleCustomizePress}>
         <Text style={styles.customizeButtonText}>Personalizar Avatar</Text>
       </TouchableOpacity>
 
-      {/* Este será el contenedor principal de tu chat o la navegación a la personalización */}
       <View style={styles.chatSection}>
         <Text style={styles.chatTitle}>¡Bienvenido al Chat!</Text>
         <Text style={styles.chatDescription}>
@@ -71,7 +103,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 5, // Para Android
+    elevation: 5,
   },
   chatTitle: {
     fontSize: 20,
